@@ -1,6 +1,9 @@
 const express = require('express')
 const cors = require('cors')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const cookieParser = require('cookie-parser')
+const jwt = require('jsonwebtoken')
+
 
 require('dotenv').config()
 
@@ -16,10 +19,24 @@ const corsOptions = {
 // middlewares
 app.use(cors(corsOptions))
 app.use(express.json())
+app.use(cookieParser())
+
+const tokenVerify = async (req, res, next) => {
+    const token = req.cookies?.token
+    if (!token) {
+        return res.status(401).send('Unauthorized access')
+    }
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).send('Invalid token')
+        }
+        req.user = decoded
+        next()
+    })
+}
 
 // uri
-const uri = "mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.hgx0li2.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.9s7yoy1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const client = new MongoClient(uri, {
     serverApi: {
@@ -31,10 +48,50 @@ const client = new MongoClient(uri, {
 
 async function run() {
     try {
-        // Connect the client to the server	(optional starting in v4.7)
-        // await client.connect();
-        // Send a ping to confirm a successful connection
-        // await client.db("admin").command({ ping: 1 });
+        // database
+        const nebula_database = client.db('nebula_clash_db')
+
+        //collections
+        const contests_collection = nebula_database.collection('contests')
+        const users_collection = nebula_database.collection('users')
+        const submissions_collection = nebula_database.collection('submissions')
+        const payments_collection = nebula_database.collection('payments')
+
+        // routes
+
+        // get all contests from db
+        app.get('/contests', async (req, res) => {
+            const contests = await contests_collection.find({}).toArray();
+            console.log('Contests fetched:', contests);
+            res.send(contests);
+        });
+
+        // get all contests that are popular by total participation count in descending order
+        app.get('/popular-contests', async (req, res) => {
+            const contests = await contests_collection.find({}).toArray(); // Fetch all contests
+            // Sort contests by participant count (descending order)
+            contests.sort((a, b) => b.participants.length - a.participants.length);
+            res.send(contests);
+        });
+
+
+        // jwt
+        app.post('/jwt', async (req, res) => {
+            const user = req.body
+            const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: '1d' })
+            res
+                .cookie('token', token, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
+                })
+                .send({ success: true })
+        })
+
+        app.get('/logout', async (req, res) => {
+            res.clearCookie('token')
+            res.send('Logged out')
+        })
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
