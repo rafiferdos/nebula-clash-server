@@ -68,12 +68,14 @@ async function run() {
 
         // get all contests that are popular by total participation count in descending order
         app.get('/popular-contests', async (req, res) => {
-            const contests = await contests_collection.find({}).toArray(); // Fetch all contests
-            // Sort contests by participant count (descending order)
-            contests.sort((a, b) => b.participants.length - a.participants.length);
-            res.send(contests);
-        });
-
+              const contests = await contests_collection.aggregate([
+                { $match: {} },
+                { $addFields: { participantCount: { $size: "$participants" } } }, 
+                { $sort: { participantCount: -1 } },
+                { $limit: 6 }
+              ]).toArray();
+              res.send(contests);
+          });
 
         // jwt
         app.post('/jwt', async (req, res) => {
