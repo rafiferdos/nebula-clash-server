@@ -13,11 +13,13 @@ const app = express()
 const corsOptions = {
     origin: ['http://localhost:5173', 'http://localhost:5174', 'https://nebula-clash.web.app/'],
     credentials: true,
-    optionsSuccessStatus: 200
+    optionsSuccessStatus: 200,
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
 }
 
 // middlewares
 app.use(cors(corsOptions))
+app.options("", cors(corsOptions))
 app.use(express.json())
 app.use(cookieParser())
 
@@ -67,14 +69,20 @@ async function run() {
 
         // get all contests that are popular by total participation count in descending order
         app.get('/popular-contests', async (req, res) => {
-              const contests = await contests_collection.aggregate([
+            const contests = await contests_collection.aggregate([
                 { $match: {} },
-                { $addFields: { participantCount: { $size: "$participants" } } }, 
+                { $addFields: { participantCount: { $size: "$participants" } } },
                 { $sort: { participantCount: -1 } },
                 { $limit: 6 }
-              ]).toArray();
-              res.send(contests);
-          });
+            ]).toArray();
+            res.send(contests);
+        });
+
+        // get contest details by id
+        app.get('/contest-details/:id', async (req, res) => {
+            const contest = await contests_collection.findOne({ _id: new ObjectId(req.params.id) });
+            res.send(contest);
+        });
 
         // jwt
         app.post('/jwt', async (req, res) => {
