@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -5,7 +6,6 @@ const cookieParser = require('cookie-parser')
 const jwt = require('jsonwebtoken')
 
 
-require('dotenv').config()
 
 const port = process.env.PORT || 9000
 const app = express()
@@ -62,7 +62,6 @@ async function run() {
         // get all contests from db
         app.get('/all-contests', async (req, res) => {
             const contests = await contests_collection.find({}).toArray();
-            console.log('Contests fetched:', contests);
             res.send(contests);
         });
 
