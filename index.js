@@ -60,7 +60,7 @@ async function run() {
         // routes
 
         // get all contests from db
-        app.get('/contests', async (req, res) => {
+        app.get('/all-contests', async (req, res) => {
             const contests = await contests_collection.find({}).toArray();
             console.log('Contests fetched:', contests);
             res.send(contests);
