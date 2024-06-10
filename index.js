@@ -84,6 +84,20 @@ async function run() {
             res.send(contest);
         });
 
+        // get all winners from finished contests
+        app.get('/winners', async (req, res) => {
+            try {
+              const finishedContests = await contests_collection.find({ status: "finished" }).toArray();
+              const winnerIds = finishedContests.map(contest => contest.winnerId);
+          
+              const winners = await users_collection.find({ _id: { $in: winnerIds } }).toArray();
+          
+              res.send(winners);
+            } catch (error) {
+              // ... error handling
+            }
+          });
+
         // jwt
         app.post('/jwt', async (req, res) => {
             const user = req.body
