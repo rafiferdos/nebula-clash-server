@@ -200,14 +200,61 @@ async function run() {
         });
 
         // update user role by id
-        app.put("/update-user/:id", async (req, res) => {
-            // just update the status property of the user
+        // app.put("/update-user/:id", async (req, res) => {
+        //     // just update the status property of the user
+        //     try {
+        //         const userId = req.params.id;
+        //         const updatedUserData = req.body;
+
+        //         const result = await users_collection.updateOne(
+        //             { _id: new ObjectId(userId) },
+        //             { $set: updatedUserData }
+        //         );
+
+        //         res.send(result);
+        //     } catch (error) {
+        //         console.error("Error updating user:", error);
+        //         res.status(500).send({ error: "Failed to update user" });
+        //     }
+        // });
+
+        // update user role by id
+        app.put("/update-user/:id", tokenVerify, async (req, res) => {
             try {
                 const userId = req.params.id;
                 const updatedUserData = req.body;
 
+                // Convert userId to ObjectId
+                const objectId = new ObjectId(userId);
+
+                // Log userId for debugging
+                console.log("Updating user with ID:", objectId);
+
                 const result = await users_collection.updateOne(
-                    { _id: new ObjectId(userId) },
+                    { _id: objectId },
+                    { $set: updatedUserData }
+                );
+
+                // Check if any documents were modified
+                if (result.modifiedCount === 0) {
+                    return res.status(404).send({ error: "User not found" });
+                }
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error updating user:", error);
+                res.status(500).send({ error: "Failed to update user" });
+            }
+        });
+
+        // update user role to requested by user email
+        app.put("/update-user-role/:email", async (req, res) => {
+            try {
+                const email = req.params.email;
+                const updatedUserData = req.body;
+
+                const result = await users_collection.updateOne(
+                    { email: email },
                     { $set: updatedUserData }
                 );
 
@@ -225,42 +272,42 @@ async function run() {
             // check if user already exists in db
             const isExist = await users_collection.findOne(query)
             if (isExist) {
-              if (user.status === 'Requested') {
-                // if existing user try to change his role
-                const result = await users_collection.updateOne(query, {
-                  $set: { status: user?.status },
-                })
-                return res.send(result)
-              } else {
-                // if existing user login again
-                return res.send(isExist)
-              }
+                if (user.status === 'requested') {
+                    // if existing user try to change his role
+                    const result = await users_collection.updateOne(query, {
+                        $set: { status: user?.status },
+                    })
+                    return res.send(result)
+                } else {
+                    // if existing user login again
+                    return res.send(isExist)
+                }
             }
-      
+
             // save user for the first time
             const options = { upsert: true }
             const updateDoc = {
-              $set: {
-                ...user,
-                timestamp: Date.now(),
-              },
+                $set: {
+                    ...user,
+                    timestamp: Date.now(),
+                },
             }
             const result = await users_collection.updateOne(query, updateDoc, options)
             res.send(result)
-          })
+        })
 
-          // delete user by id
-            app.delete("/delete-user/:id", async (req, res) => {
-                try {
-                    const userId = req.params.id;
-                    const result = await users_collection.deleteOne({ _id: new ObjectId(userId) });
-    
-                    res.send(result);
-                } catch (error) {
-                    console.error("Error deleting user:", error);
-                    res.status(500).send({ error: "Failed to delete user" });
-                }
-            });
+        // delete user by id
+        app.delete("/delete-user/:id", async (req, res) => {
+            try {
+                const userId = req.params.id;
+                const result = await users_collection.deleteOne({ _id: new ObjectId(userId) });
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error deleting user:", error);
+                res.status(500).send({ error: "Failed to delete user" });
+            }
+        });
 
         // jwt
         app.post('/jwt', async (req, res) => {
