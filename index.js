@@ -123,6 +123,37 @@ async function run() {
             res.send(contests);
         });
 
+        // delete contest by id
+        app.delete("/delete-contest/:id", async (req, res) => {
+            try {
+                const contestId = req.params.id;
+                const result = await contests_collection.deleteOne({ _id: new ObjectId(contestId) });
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error deleting contest:", error);
+                res.status(500).send({ error: "Failed to delete contest" });
+            }
+        });
+
+        // update contest status by id
+        app.put("/update-contest-status/:id", async (req, res) => {
+            try {
+                const contestId = req.params.id;
+                const updatedStatus = req.body;
+
+                const result = await contests_collection.updateOne(
+                    { _id: new ObjectId(contestId) },
+                    { $set: updatedStatus }
+                );
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error updating contest status:", error);
+                res.status(500).send({ error: "Failed to update contest status" });
+            }
+        });
+
         // get contest details by id
         app.get('/contest-details/:id', async (req, res) => {
             const contest = await contests_collection.findOne({ _id: new ObjectId(req.params.id) });
