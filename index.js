@@ -67,6 +67,51 @@ async function run() {
             res.send(contests);
         });
 
+        // create contest
+        app.post('/create-contest', async (req, res) => {
+            const contest = req.body
+            const result = await contests_collection.insertOne(contest)
+            res.send(result)
+        });
+
+        // update contest by id
+        app.put("/update-contest/:id", async (req, res) => {
+            try {
+                const contestId = req.params.id;
+                const updatedContestData = req.body;
+
+                const result = await contests_collection.updateOne(
+                    { _id: new ObjectId(contestId) },
+                    { $set: updatedContestData }
+                );
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error updating contest:", error);
+                res.status(500).send({ error: "Failed to update contest" });
+            }
+        });
+
+        // delete contest by id
+        app.delete("/delete-contest/:id", async (req, res) => {
+            try {
+                const contestId = req.params.id;
+                const result = await contests_collection.deleteOne({ _id: new ObjectId(contestId) });
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error deleting contest:", error);
+                res.status(500).send({ error: "Failed to delete contest" });
+            }
+        });
+
+        // get all contests created by user email
+        app.get('/my-contests/:email', async (req, res) => {
+            const email = req.params.email
+            const contests = await contests_collection.find({ "creator.email": email }).toArray();
+            res.send(contests);
+        });
+
         // get all contests that are popular by total participation count in descending order
         app.get('/popular-contests', async (req, res) => {
             const contests = await contests_collection.aggregate([
@@ -87,16 +132,85 @@ async function run() {
         // get all winners from finished contests
         app.get('/winners', async (req, res) => {
             try {
-              const finishedContests = await contests_collection.find({ status: "finished" }).toArray();
-              const winnerIds = finishedContests.map(contest => contest.winnerId);
-          
-              const winners = await users_collection.find({ _id: { $in: winnerIds } }).toArray();
-          
-              res.send(winners);
+                const finishedContests = await contests_collection.find({ status: "finished" }).toArray();
+                const winnerIds = finishedContests.map(contest => contest.winnerId);
+
+                const winners = await users_collection.find({ _id: { $in: winnerIds } }).toArray();
+
+                res.send(winners);
             } catch (error) {
-              // ... error handling
+                // ... error handling
             }
-          });
+        });
+
+        // get all users from db
+        app.get('/all-users', async (req, res) => {
+            const users = await users_collection.find({}).toArray();
+            res.send(users);
+        });
+
+        // get all users from db except current user by email
+        app.get('/all-users-except/:email', async (req, res) => {
+            const email = req.params.email
+            const users = await users_collection.find({ email: { $ne: email } }).toArray();
+            res.send(users);
+        });
+
+        // get user by email
+        app.get('/user/:email', async (req, res) => {
+            const user = await users_collection.findOne({ email: req.params.email });
+            res.send(user);
+        });
+
+        // update user role by id
+        app.put("/update-user/:id", async (req, res) => {
+            // just update the status property of the user
+            try {
+                const userId = req.params.id;
+                const updatedUserData = req.body;
+
+                const result = await users_collection.updateOne(
+                    { _id: new ObjectId(userId) },
+                    { $set: updatedUserData }
+                );
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error updating user:", error);
+                res.status(500).send({ error: "Failed to update user" });
+            }
+        });
+
+        // save a user in db
+        app.put('/save-user', async (req, res) => {
+            const user = req.body
+            const query = { email: user?.email }
+            // check if user already exists in db
+            const isExist = await users_collection.findOne(query)
+            if (isExist) {
+              if (user.status === 'Requested') {
+                // if existing user try to change his role
+                const result = await users_collection.updateOne(query, {
+                  $set: { status: user?.status },
+                })
+                return res.send(result)
+              } else {
+                // if existing user login again
+                return res.send(isExist)
+              }
+            }
+      
+            // save user for the first time
+            const options = { upsert: true }
+            const updateDoc = {
+              $set: {
+                ...user,
+                timestamp: Date.now(),
+              },
+            }
+            const result = await users_collection.updateOne(query, updateDoc, options)
+            res.send(result)
+          })
 
         // jwt
         app.post('/jwt', async (req, res) => {
