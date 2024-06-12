@@ -212,6 +212,19 @@ async function run() {
             res.send(result)
           })
 
+          // delete user by id
+            app.delete("/delete-user/:id", async (req, res) => {
+                try {
+                    const userId = req.params.id;
+                    const result = await users_collection.deleteOne({ _id: new ObjectId(userId) });
+    
+                    res.send(result);
+                } catch (error) {
+                    console.error("Error deleting user:", error);
+                    res.status(500).send({ error: "Failed to delete user" });
+                }
+            });
+
         // jwt
         app.post('/jwt', async (req, res) => {
             const user = req.body
