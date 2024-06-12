@@ -218,6 +218,14 @@ async function run() {
         //     }
         // });
 
+        // insert user email in contest participants array
+        app.put('/join-contest/:email', async (req, res) => {
+            const email = req.params.email
+            const contestId = req.body.contestId
+            const result = await contests_collection.updateOne({ _id: new ObjectId(contestId) }, { $addToSet: { participants: email } })
+            res.send(result)
+        })
+
         // update user role by id
         app.put("/update-user/:id", tokenVerify, async (req, res) => {
             try {
@@ -264,6 +272,21 @@ async function run() {
                 res.status(500).send({ error: "Failed to update user" });
             }
         });
+
+        app.post('/create-payment-intent', async (req, res) => {
+            const { amount, currency } = req.body;
+            try {
+              const paymentIntent = await stripe.paymentIntents.create({
+                amount,
+                currency,
+              });
+              res.status(200).send({
+                clientSecret: paymentIntent.client_secret,
+              });
+            } catch (error) {
+              res.status(500).send(error);
+            }
+          });
 
         // save a user in db
         app.put('/save-user', async (req, res) => {
