@@ -11,7 +11,7 @@ const port = process.env.PORT || 9000
 const app = express()
 
 const corsOptions = {
-    origin: ['http://localhost:5173', 'http://localhost:5174', 'https://nebula-clash.web.app/'],
+    origin: ['http://localhost:5173', 'http://localhost:5174', 'https://nebula-clash.web.app'],
     credentials: true,
     optionsSuccessStatus: 200,
     methods: ['GET', 'POST', 'PUT', 'DELETE']
@@ -61,8 +61,14 @@ async function run() {
 
         // routes
 
-        // get all contests from db
+        // get all contests from db which status is open
         app.get('/all-contests', async (req, res) => {
+            const contests = await contests_collection.find({ status: "open" }).toArray();
+            res.send(contests);
+        });
+
+        // get all contests from db
+        app.get('/all-contests-unfiltered', async (req, res) => {
             const contests = await contests_collection.find({}).toArray();
             res.send(contests);
         });
@@ -115,7 +121,7 @@ async function run() {
         // get all contests that are popular by total participation count in descending order
         app.get('/popular-contests', async (req, res) => {
             const contests = await contests_collection.aggregate([
-                { $match: {} },
+                { $match: { status: 'open' } },
                 { $addFields: { participantCount: { $size: "$participants" } } },
                 { $sort: { participantCount: -1 } },
                 { $limit: 6 }
